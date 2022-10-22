@@ -14,20 +14,44 @@ class Users(db.Model):
     username = db.Column(db.String, nullable=False)
     password = db.Column(db.String(300), nullable=False, unique=True)
     email = db.Column(db.String(120), nullable=False, unique=True)
-    group = db.Column(db.String(120))
     create_date = db.Column(db.DateTime(timezone=True))
 
+class Roles(db.Model):
+    __tablename__ = 'Roles'
+    roleid = db.Column(db.Integer, primary_key=True)
+    rolename = db.Column(db.String, nullable=False)
     
-class User_roles(db.Model):
-    __tablename__ = 'User_roles'
+class Groups(db.Model):
+    __tablename__ = 'Groups'
+    groupid = db.Column(db.Integer, primary_key=True)
+    groupname = db.Column(db.String, nullable=False)
 
-    id = db.Column(db.Integer, primary_key=True)
-    roleid = db.Column(db.Integer)
-    role = db.Column(db.String)
-    username = db.Column(db.String(120))
-    userid = db.Column(db.Integer)
-    group = db.Column(db.String(120))
-    groupid = db.Column(db.Integer)
-    status = db.Column(db.String(80))
-    create_date = db.Column(db.DateTime(timezone=True))
+class Permissions(db.Model):
+    __tablename__ = 'Permissions'
+    permission_id = db.Column(db.Integer, primary_key=True)
+    permission_description = db.Column(db.String(120), nullable=False)
+    resource_url = db.Column(db.String(120), nullable=False)
 
+class User_Roles(db.Model):
+    __tablename__ = 'User_Roles'
+    user_role_id = db.Column(db.Integer, primary_key=True)
+    roleid = db.Column(db.Integer, db.ForeignKey('Roles.roleid'), nullable=False)
+    userid = db.Column(db.Integer, db.ForeignKey('Users.userid'), nullable=False)
+
+class User_Groups(db.Model):
+    __tablename__ = 'User_Groups'
+    user_group_id = db.Column(db.Integer, primary_key=True)
+    groupid = db.Column(db.Integer, db.ForeignKey('Groups.groupid'), nullable=False)
+    userid = db.Column(db.Integer, db.ForeignKey('Users.userid'), nullable=False)
+
+class Role_Permissions(db.Model):
+    __tablename__ = 'Role_Permissions'
+    role_permission_id = db.Column(db.Integer, primary_key=True)
+    roleid = db.Column(db.Integer, db.ForeignKey('Roles.roleid'), nullable=False)
+    permission_id = db.Column(db.Integer, db.ForeignKey('Permissions.permission_id'), nullable=False)
+
+class Group_Permissions(db.Model):
+    __tablename__ = 'Group_Permissions'
+    group_permission_id = db.Column(db.Integer, primary_key=True)
+    groupid = db.Column(db.Integer, db.ForeignKey('Groups.groupid'), nullable=False)
+    permission_id = db.Column(db.Integer, db.ForeignKey('Permissions.permission_id'), nullable=False)
