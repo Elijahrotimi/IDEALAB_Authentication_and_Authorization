@@ -1,17 +1,13 @@
-from distutils.log import error
-import json
 import dateutil.parser
 import babel
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask import Flask, render_template, request, jsonify, flash, redirect, url_for
+from flask import Flask, request, jsonify, flash, redirect, url_for
 from flask_cors import CORS
 from flask_moment import Moment
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import desc
 from flask_migrate import Migrate
-import logging
 from logging import Formatter, FileHandler
-from flask_wtf import Form
 from forms import *
 from models import Group_Permissions, Role_Permissions, Roles, Groups, User_Roles, db, Users, User_Groups, Permissions
 from datetime import datetime, timezone
@@ -73,6 +69,185 @@ def login():
 def logout():
     logout_user()
     return redirect('/login')
+
+@app.route('/users/add', methods=['POST'])
+@login_required
+def add_new_user():
+    cur_user_perm = get_user_permissions(current_user.userid)
+    isValid = has_permissions(cur_user_perm, 'add_new_user')
+    if isValid:
+        try:
+            username = request.form.get('username', None)
+            user = get_user_details(username)
+            if user:
+                flash('Username already exists')
+                return redirect(url_for('login'))
+            firstname = request.form.get('firstname', None)
+            lastname = request.form.get('lastname', None)
+            email = (((firstname.lower()).split(" "))[0])+'.'+(((lastname.lower()).split(" "))[0])+'@idealab.com'
+            password = ((username.lower()).split(" "))[0] + '2022'
+            hashed_password = generate_password_hash(password, method='pbkdf2:sha256', salt_length=16)
+            firstname = request.form.get('firstname')
+            create_date = datetime.now()
+
+            new_user = Users(username=username, firstname=firstname, lastname=lastname,email=email,password=hashed_password,create_date=create_date,created_by=current_user)
+            db.session.add(new_user)
+            db.session.commit()
+            flash('User created successfully.')
+            return redirect(url_for("login"))
+        except Exception as e:
+            flash(e, "danger")
+    else:
+        flash('You do not have the permission to perform this function!')
+        return redirect(url_for("login"))
+
+@app.route('/users/<int:userid>', methods=['POST'])
+@login_required
+def retrieve_user_info(userid):
+    cur_user_perm = get_user_permissions(current_user.userid)
+    isValid = has_permissions(cur_user_perm, 'retrieve_user_info')
+    if isValid:
+        try:
+            user = Users.query.filter(Users.userid == userid).first()
+            return jsonify({
+                "success": True,
+                "firstname": user.firstname,
+                "lastname": user.lastname,
+                "username": user.username,
+                "email": user.email,
+                "created_by": user.created_by,
+                "create_date": user.create_date
+            })
+        except Exception as e:
+            flash(e, "danger")
+    else:
+        flash('You do not have the permission to perform this function!')
+        return redirect(url_for("login"))
+
+@app.route('/users/all', methods=['POST'])
+@login_required
+def retrieve_all_users():
+    data = []
+    cur_user_perm = get_user_permissions(current_user.userid)
+    isValid = has_permissions(cur_user_perm, 'retrieve_all_users')
+    if isValid:
+        try:
+            users = db.session.query(Users).order_by('userid').all()
+            for user in users:
+                data.append({
+                    "success": True,
+                    "firstname": user.firstname,
+                    "lastname": user.lastname,
+                    "username": user.username,
+                    "email": user.email,
+                    "created_by": user.created_by,
+                    "create_date": user.create_date
+                })
+            return data
+        except Exception as e:
+            flash(e, "danger")
+    else:
+        flash('You do not have the permission to perform this function!')
+        return redirect(url_for("login"))
+
+@app.route('/users/add/roles', methods=['POST'])
+@login_required
+def assign_user_roles():
+    username = request.form.get('username', None)
+    rolename = request.form.get('rolename', None)
+    cur_user_perm = get_user_permissions(current_user.userid)
+    isValid = has_permissions(cur_user_perm, 'assign_user_roles')
+    if isValid:
+        try:
+            user = get_user_details(username)
+            roleid = Roles.query.filter(Roles.rolename == rolename).first()
+            new_user_role = User_Roles(userid=user.userid,roleid=roleid)
+            db.session.add(new_user_role)
+            db.session.commit()
+            return redirect(url_for("login"))
+    
+        except Exception as e:
+            flash(e, "danger")
+            db.session.rollback()
+        finally:
+            db.session.close()
+    else:
+        flash('You do not have the permission to perform this function!')
+        return redirect(url_for("login"))
+
+@app.route('/users/add/groups', methods=['POST'])
+@login_required
+def assign_user_groups():
+    username = request.form.get('username', None)
+    groupname = request.form.get('groupname', None)
+    cur_user_perm = get_user_permissions(current_user.userid)
+    isValid = has_permissions(cur_user_perm, 'assign_user_groups')
+    if isValid:
+        try:
+            user = get_user_details(username)
+            groupid = Groups.query.filter(Groups.groupname == groupname).first()
+            new_user_role = User_Groups(userid=user.userid,groupid=groupid)
+            db.session.add(new_user_role)
+            db.session.commit()
+            return redirect(url_for("login"))
+    
+        except Exception as e:
+            flash(e, "danger")
+            db.session.rollback()
+        finally:
+            db.session.close()
+    else:
+        flash('You do not have the permission to perform this function!')
+        return redirect(url_for("login"))
+
+@app.route('/roles/add/permissions', methods=['POST'])
+@login_required
+def assign_role_permissions():
+    rolename = request.form.get('rolename', None)
+    permission_id = request.form.get('permission_id', None)
+    cur_user_perm = get_user_permissions(current_user.userid)
+    isValid = has_permissions(cur_user_perm, 'assign_role_permissions')
+    if isValid:
+        try:
+            roleid = Roles.query.filter(Roles.rolename == rolename).first()
+            new_role_perm = Role_Permissions(roleid=roleid,permission_id=permission_id)
+            db.session.add(new_role_perm)
+            db.session.commit()
+            return redirect(url_for("login"))
+    
+        except Exception as e:
+            flash(e, "danger")
+            db.session.rollback()
+        finally:
+            db.session.close()
+    else:
+        flash('You do not have the permission to perform this function!')
+        return redirect(url_for("login"))
+
+@app.route('/groups/add/permissions', methods=['POST'])
+@login_required
+def assign_group_permissions():
+    groupname = request.form.get('groupname', None)
+    permission_id = request.form.get('permission_id', None)
+    cur_user_perm = get_user_permissions(current_user.userid)
+    isValid = has_permissions(cur_user_perm, 'assign_group_permissions')
+    if isValid:
+        try:
+            roleid = Groups.query.filter(Groups.groupname == groupname).first()
+            new_role_perm = Group_Permissions(groupid=groupid,permission_id=permission_id)
+            db.session.add(new_role_perm)
+            db.session.commit()
+            return redirect(url_for("login"))
+    
+        except Exception as e:
+            flash(e, "danger")
+            db.session.rollback()
+        finally:
+            db.session.close()
+    else:
+        flash('You do not have the permission to perform this function!')
+        return redirect(url_for("login"))
+
 
 #functions
 def get_user_details(username):
