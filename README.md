@@ -58,7 +58,7 @@ pip install -r requirements.txt
 
 4. **Run the development server:**
 ```
-export FLASK_APP=myapp
+export FLASK_APP=app.py
 export FLASK_ENV=development
-python3 app.py
+flask run --reload
 ```
