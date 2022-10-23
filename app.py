@@ -3,7 +3,7 @@ import json
 import dateutil.parser
 import babel
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask import Flask, render_template, request, Response, flash, redirect, url_for
+from flask import Flask, render_template, request, jsonify, flash, redirect, url_for
 from flask_cors import CORS
 from flask_moment import Moment
 from flask_sqlalchemy import SQLAlchemy
@@ -53,6 +53,27 @@ def after_request(response):
     )
     return response
 
+@app.route('/login', methods=['GET'])
+def login():
+    username = request.form.get('username', None)
+    password = request.form.get('password', None)
+
+    try: 
+        user = get_user_details(username)
+        if not user or not check_password_hash(user.password, password):
+            flash('Invalid password, please check password and try again!')
+            return redirect('/login')
+
+    except:
+        flash('Please verify your login username and try again.')
+        return redirect('/login')
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect('/login')
+
 #functions
 def get_user_details(username):
     user = Users.query.filter(Users.username == username).first()
@@ -89,7 +110,7 @@ def get_user_permissions(userid):
         user_permssions.append(role_perm)
     
     for group in user_groups:
-        group_perm = get_group_permissions(user_groups.groupid)
+        group_perm = get_group_permissions(group.groupid)
         user_permssions.append(group_perm)
 
     for perm in user_permssions:
@@ -97,3 +118,10 @@ def get_user_permissions(userid):
         permissions.append(p)
 
     return permissions
+
+def has_permissions(permissions, description):
+    for p in permissions:
+        if p.permission_description == description:
+            return True
+        else:
+            return False
