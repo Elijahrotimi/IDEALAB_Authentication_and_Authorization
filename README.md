@@ -44,10 +44,6 @@ git clone  https://github.com/Elijahrotimi/IDEALAB_Authentication_and_Authorizat
 2. **Initialize and activate a virtualenv using:**
 ```
 python -m virtualenv env
-source env/bin/activate
-```
-
-```
 source env/Scripts/activate
 ```
 
