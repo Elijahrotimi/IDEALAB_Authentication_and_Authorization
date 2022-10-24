@@ -1,3 +1,4 @@
+psycopg2-binary 
 babel
 python-dateutil
 flask-moment
