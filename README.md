@@ -56,7 +56,12 @@ source env/Scripts/activate
 pip install -r requirements.txt
 ```
 
-4. **Run the development server:**
+4. **Create Database:**
+```
+dropdb Idealabdb
+createdb Idealabdb
+```
+5. **Run the development server:**
 ```
 export FLASK_APP=app.py
 export FLASK_ENV=development
